@@ -17,27 +17,19 @@ def buylist_module():
         st.info("No items in Buy List")
         return
 
-    # Build a DataFrame for aligned display
+    # Build aligned table
     df = pd.DataFrame([{
         "Item": b["database_items"]["name"],
-        "Quantity": b["quantity"],
-        "Update Qty": "",       # placeholder for widget
-        "Action": ""            # placeholder for widget
+        "Quantity": b["quantity"]
     } for b in buy_items])
+    st.dataframe(df, use_container_width=True)
 
-    st.write("### Current Buy List")
-    st.table(df)  # static aligned table
-
-    # Interactive controls below the table
+    # Interactive controls below each row
     for b in buy_items:
-        st.markdown("---")
-        st.write(f"**{b['database_items']['name']}**")
+        st.markdown(f"---\n**{b['database_items']['name']}**")
         new_qty = st.number_input(
-            "Qty", 
-            value=float(b["quantity"]), 
-            step=1.0, 
-            key=f"qty_{b['id']}", 
-            label_visibility="collapsed"
+            "Qty", value=float(b["quantity"]), step=1.0,
+            key=f"qty_{b['id']}", label_visibility="collapsed"
         )
         cols = st.columns([1,1])
         if cols[0].button("Update", key=f"update_{b['id']}"):

@@ -1,4 +1,5 @@
 import streamlit as st
+import pandas as pd
 from supabase_client import supabase
 from helpers import get_family_id, format_timestamp
 
@@ -9,24 +10,40 @@ def stock_module():
         st.error("No family linked to your account.")
         return
 
-    # Fetch stock items with linked database info
     data = supabase.table("stock_list").select("*, database_items(name)").eq("family_id", family_id).execute()
     stock_items = data.data
 
-    for s in stock_items:
-        col1, col2, col3, col4, col5 = st.columns([3,2,2,2,2])
-        col1.write(f"{s['database_items']['name']} - {s['quantity']}")
-        col2.write(format_timestamp(s.get("purchased_date")))
+    if not stock_items:
+        st.info("No items in Stock List")
+        return
 
-        # Status dropdown
-        new_status = col3.selectbox(
-            "Status",
-            ["available","reducing","exhausted"],
+    # Build aligned table
+    df = pd.DataFrame([{
+        "Item": s["database_items"]["name"],
+        "Quantity": s["quantity"],
+        "Purchased": format_timestamp(s.get("purchased_date")),
+        "Status": s["status"]
+    } for s in stock_items])
+    st.dataframe(df, use_container_width=True)
+
+    # Interactive controls below each row
+    for s in stock_items:
+        st.markdown(f"---\n**{s['database_items']['name']}**")
+        new_qty = st.number_input(
+            "Qty", value=float(s["quantity"]), step=1.0,
+            key=f"qty_{s['id']}", label_visibility="collapsed"
+        )
+        new_status = st.selectbox(
+            "Status", ["available","reducing","exhausted"],
             index=["available","reducing","exhausted"].index(s["status"]),
             key=f"status_{s['id']}"
         )
 
-        # Update status
+        cols = st.columns([1,1])
+        if cols[0].button("Update Qty", key=f"update_{s['id']}"):
+            supabase.table("stock_list").update({"quantity": new_qty}).eq("id", s["id"]).execute()
+            st.success(f"{s['database_items']['name']} stock updated to {new_qty}")
+
         if new_status != s["status"]:
             supabase.table("stock_list").update({"status": new_status}).eq("id", s["id"]).execute()
             st.success(f"Status updated for {s['database_items']['name']}")
@@ -35,9 +52,3 @@ def stock_module():
             if new_status == "exhausted":
                 supabase.table("stock_list").delete().eq("id", s["id"]).execute()
                 st.warning(f"{s['database_items']['name']} removed from Stock List (exhausted)")
-
-        # Quantity update
-        new_qty = col4.number_input("Qty", value=float(s["quantity"]), step=1.0, key=f"qty_{s['id']}")
-        if col5.button("Update", key=f"update_{s['id']}"):
-            supabase.table("stock_list").update({"quantity": new_qty}).eq("id", s["id"]).execute()
-            st.success(f"{s['database_items']['name']} stock updated to {new_qty}")
