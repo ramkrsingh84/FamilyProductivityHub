@@ -38,11 +38,13 @@ def format_timestamp(ts):
     except:
         return ts
         
+# --- Helper: Get user name for greeting ---
 def get_user_name():
     result = supabase.table("app_users").select("name").eq("auth_id", st.session_state["user"].id).execute()
     if result.data and result.data[0]["name"]:
         return result.data[0]["name"]
     return st.session_state["user"].email  # fallback
+
 
 # --- Login ---
 def login():
