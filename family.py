@@ -1,62 +1,46 @@
 import streamlit as st
 from supabase_client import supabase
-from helpers import get_app_user
+from helpers import get_user_id
 
 def family_module():
-    st.subheader("Family Management")
+    st.subheader("Family Groups")
 
-    # Create Family
-    fam_name = st.text_input("Family Name")
-    if st.button("Create Family"):
-        family = supabase.table("families").insert({
-            "name": fam_name,
-            "created_by": st.session_state["user"].id
-        }).execute()
+    user_id = get_user_id()
+    if not user_id:
+        st.error("No user logged in.")
+        return
 
-        if family.data:
-            fam_id = family.data[0]["id"]
-            supabase.table("app_users").update({
-                "family_id": fam_id,
-                "role": "admin"
-            }).eq("auth_id", st.session_state["user"].id).execute()
-            st.success(f"Family '{fam_name}' created! Share ID: {fam_id}")
+    # Get current user record
+    user_data = supabase.table("app_users").select("*").eq("id", user_id).execute()
+    if not user_data.data:
+        st.error("User not found.")
+        return
+    user = user_data.data[0]
 
-    # Request to Join Family
-    families = supabase.table("families").select("id, name").execute()
-    fam_options = {f["name"]: f["id"] for f in families.data} if families.data else {}
-    fam_choice = st.selectbox("Select Family to request join", list(fam_options.keys())) if fam_options else None
+    # Show current family if any
+    if user.get("family_id"):
+        fam_data = supabase.table("families").select("*").eq("id", user["family_id"]).execute()
+        current_family = fam_data.data[0] if fam_data.data else None
+        if current_family:
+            st.success(f"You are already part of family: **{current_family['name']}**")
+    else:
+        st.info("You are not part of any family yet.")
 
-    if st.button("Request to Join"):
-        if fam_choice:
-            fam_id = fam_options[fam_choice]
-            app_user = get_app_user()
-            supabase.table("family_requests").insert({
-                "family_id": fam_id,
-                "requester_id": app_user["id"],
-                "status": "pending"
-            }).execute()
-            st.success("Join request submitted. Awaiting admin approval.")
+    # Show all families
+    families = supabase.table("families").select("*").execute().data
+    if not families:
+        st.info("No families created yet.")
+        return
 
-    # Admin Approval
-    app_user = get_app_user()
-    if app_user and app_user["role"] == "admin":
-        requests = supabase.table("family_requests").select("id, requester_id, status").eq("family_id", app_user["family_id"]).eq("status", "pending").execute()
-        if requests.data:
-            st.write("Pending Join Requests:")
-            for r in requests.data:
-                requester = supabase.table("app_users").select("name").eq("id", r["requester_id"]).execute()
-                requester_name = requester.data[0]["name"] if requester.data else "Unknown"
-
-                col1, col2 = st.columns(2)
-                with col1:
-                    if st.button(f"Approve {requester_name}", key=f"approve_{r['id']}"):
-                        supabase.table("app_users").update({
-                            "family_id": app_user["family_id"],
-                            "role": "member"
-                        }).eq("id", r["requester_id"]).execute()
-                        supabase.table("family_requests").update({"status": "approved"}).eq("id", r["id"]).execute()
-                        st.success(f"{requester_name} added to family.")
-                with col2:
-                    if st.button(f"Reject {requester_name}", key=f"reject_{r['id']}"):
-                        supabase.table("family_requests").update({"status": "rejected"}).eq("id", r["id"]).execute()
-                        st.warning(f"{requester_name}'s request rejected.")
+    st.write("### Available Families")
+    for f in families:
+        st.write(f"**{f['name']}**")
+        # Only show join option if user not already in this family
+        if user.get("family_id") != f["id"]:
+            if st.button(f"Join {f['name']}", key=f"join_{f['id']}"):
+                supabase.table("family_requests").insert({
+                    "family_id": f["id"],
+                    "requester_id": user["id"],
+                    "status": "pending"
+                }).execute()
+                st.success(f"Join request sent to {f['name']}")
