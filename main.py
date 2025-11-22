@@ -19,6 +19,13 @@ st.markdown(
 )
 
 
+# --- Helper: Get family_id for current user ---
+def get_family_id():
+    result = supabase.table("app_users").select("family_id").eq("auth_id", st.session_state["user"].id).execute()
+    if result.data and result.data[0]["family_id"]:
+        return result.data[0]["family_id"]
+    return None
+
 # --- Login ---
 def login():
     st.subheader("Login")
@@ -27,10 +34,10 @@ def login():
     if st.button("Login"):
         try:
             user = supabase.auth.sign_in_with_password({"email": email, "password": password})
-            if user.user:  # ensure login succeeded
+            if user.user:
                 st.session_state["user"] = user.user
                 st.success("Logged in successfully!")
-                st.rerun()  # reload into main menu
+                st.rerun()
             else:
                 st.error("Login failed: No user returned")
         except Exception as e:
@@ -57,6 +64,34 @@ def register():
         except Exception as e:
             st.error(f"Registration failed: {e}")
 
+# --- Family Management ---
+def family_module():
+    st.subheader("Family Management")
+
+    # Create Family
+    fam_name = st.text_input("Family Name")
+    if st.button("Create Family"):
+        family = supabase.table("families").insert({
+            "name": fam_name,
+            "created_by": st.session_state["user"].id
+        }).execute()
+        if family.data:
+            fam_id = family.data[0]["id"]
+            supabase.table("app_users").update({
+                "family_id": fam_id,
+                "role": "admin"
+            }).eq("auth_id", st.session_state["user"].id).execute()
+            st.success(f"Family '{fam_name}' created! Share ID: {fam_id}")
+
+    # Join Family
+    fam_id = st.text_input("Enter Family ID to join")
+    if st.button("Join Family"):
+        supabase.table("app_users").update({
+            "family_id": fam_id,
+            "role": "member"
+        }).eq("auth_id", st.session_state["user"].id).execute()
+        st.success("Joined family successfully!")
+
 # --- Grocery Management ---
 def grocery_module():
     st.subheader("Grocery Stock Management")
@@ -65,20 +100,26 @@ def grocery_module():
     unit_type = st.selectbox("Unit type", ["piece", "weight"])
     must_buy_next = st.checkbox("Must buy next visit")
 
+    family_id = get_family_id()
+
     if st.button("Add Grocery"):
-        supabase.table("groceries").insert({
-            "name": name,
-            "quantity": quantity,
-            "unit_type": unit_type,
-            "must_buy_next": must_buy_next,
-            "family_id": 1,  # placeholder family id
-            "added_by": st.session_state["user"].id
-        }).execute()
-        st.success("Item added!")
+        if family_id:
+            supabase.table("groceries").insert({
+                "name": name,
+                "quantity": quantity,
+                "unit_type": unit_type,
+                "must_buy_next": must_buy_next,
+                "family_id": family_id,
+                "added_by": st.session_state["user"].id
+            }).execute()
+            st.success("Item added!")
+        else:
+            st.error("No family linked to your account. Please create or join a family first.")
 
     st.write("Current Grocery List:")
-    data = supabase.table("groceries").select("*").execute()
-    st.table(data.data)
+    if family_id:
+        data = supabase.table("groceries").select("*").eq("family_id", family_id).execute()
+        st.table(data.data)
 
 # --- Task Management ---
 def task_module():
@@ -89,52 +130,26 @@ def task_module():
     assigned_to = st.text_input("Assign to (user id)")
     status = st.selectbox("Status", ["pending", "completed"])
 
+    family_id = get_family_id()
+
     if st.button("Add Task"):
-        supabase.table("tasks").insert({
-            "title": title,
-            "description": description,
-            "due_date": str(due_date),
-            "assigned_to": assigned_to,
-            "family_id": 1,  # placeholder family id
-            "status": status
-        }).execute()
-        st.success("Task added!")
+        if family_id:
+            supabase.table("tasks").insert({
+                "title": title,
+                "description": description,
+                "due_date": str(due_date),
+                "assigned_to": assigned_to,
+                "family_id": family_id,
+                "status": status
+            }).execute()
+            st.success("Task added!")
+        else:
+            st.error("No family linked to your account. Please create or join a family first.")
 
     st.write("My Tasks:")
-    data = supabase.table("tasks").select("*").execute()
-    st.table(data.data)
-
-
-def family_module():
-    st.subheader("Family Management")
-
-    # Create Family
-    with st.expander("Create Family"):
-        fam_name = st.text_input("Family Name")
-        if st.button("Create Family"):
-            family = supabase.table("families").insert({
-                "name": fam_name,
-                "created_by": st.session_state["user"].id
-            }).execute()
-
-            if family.data:
-                fam_id = family.data[0]["id"]
-                supabase.table("app_users").update({
-                    "family_id": fam_id,
-                    "role": "admin"
-                }).eq("auth_id", st.session_state["user"].id).execute()
-                st.success(f"Family '{fam_name}' created! Share ID: {fam_id}")
-
-    # Join Family
-    with st.expander("Join Family"):
-        fam_id = st.text_input("Enter Family ID to join")
-        if st.button("Join Family"):
-            supabase.table("app_users").update({
-                "family_id": fam_id,
-                "role": "member"
-            }).eq("auth_id", st.session_state["user"].id).execute()
-            st.success("Joined family successfully!")
-
+    if family_id:
+        data = supabase.table("tasks").select("*").eq("family_id", family_id).execute()
+        st.table(data.data)
 
 # --- Main App ---
 def main():
@@ -158,7 +173,7 @@ def main():
         elif menu == "Logout":
             st.session_state["user"] = None
             st.success("Logged out!")
-            st.rerun()  # reload back to login/register page
+            st.rerun()
 
 if __name__ == "__main__":
     main()
