@@ -1,3 +1,4 @@
+import streamlit as st
 from components import render_item_row
 
 def grocery_module():
