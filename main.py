@@ -1,7 +1,6 @@
 import streamlit as st
 from auth import login, register
 from family import family_module
-from groceries import grocery_module
 from tasks import task_module
 from helpers import get_user_name
 from stock_module import stock_module
