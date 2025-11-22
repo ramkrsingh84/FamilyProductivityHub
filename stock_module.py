@@ -1,5 +1,7 @@
 import streamlit as st
 from components import render_item_row
+from supabase_client import supabase
+from helpers import get_family_id
 
 def stock_module():
     st.subheader("Stock List")
