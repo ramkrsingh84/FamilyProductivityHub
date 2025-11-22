@@ -21,6 +21,7 @@ def database_module():
             "family_id": family_id
         }).execute()
         st.success("Item added to database")
+        st.rerun()
 
     # Show items
     data = supabase.table("database_items").select("*").eq("family_id", family_id).execute()
@@ -30,31 +31,25 @@ def database_module():
         st.info("No items in Database")
         return
 
-    # Display table
+    # Display aligned table
     st.write("### Current Database Items")
-    for i in items:
-        st.markdown(f"**{i['name']}** ({i['default_unit']} {i['default_weight_unit'] or ''})")
+    df = pd.DataFrame([{
+        "Item": i["name"],
+        "Unit Type": i["default_unit"],
+        "Weight Unit": i["default_weight_unit"] or ""
+    } for i in items])
+    st.dataframe(df, use_container_width=True)
 
-        # Modify controls
-        with st.expander("Modify / Delete"):
-            new_name = st.text_input("Edit Name", value=i["name"], key=f"name_{i['id']}")
-            new_unit = st.selectbox("Edit Unit Type", ["piece","weight"], 
-                                    index=["piece","weight"].index(i["default_unit"]),
-                                    key=f"unit_{i['id']}")
-            new_weight_unit = st.selectbox("Edit Weight Unit", ["","kg","gram","liter","ml","ounce","pound"],
-                                           index=(["","kg","gram","liter","ml","ounce","pound"].index(i["default_weight_unit"])
-                                                  if i["default_weight_unit"] else 0),
-                                           key=f"wunit_{i['id']}")
-            cols = st.columns([1,1])
-            if cols[0].button("Update", key=f"update_{i['id']}"):
-                supabase.table("database_items").update({
-                    "name": new_name,
-                    "default_unit": new_unit,
-                    "default_weight_unit": new_weight_unit if new_weight_unit else None
-                }).eq("id", i["id"]).execute()
-                st.success(f"{i['name']} updated")
-                st.rerun()
-            if cols[1].button("Delete", key=f"delete_{i['id']}"):
-                supabase.table("database_items").delete().eq("id", i["id"]).execute()
-                st.warning(f"{i['name']} deleted from Database")
-                st.rerun()
+    # Selection dropdown
+    selected_item = st.selectbox(
+        "Select an item to modify/delete",
+        options=[f"{i['name']} ({i['default_unit']} {i['default_weight_unit'] or ''})" for i in items],
+        index=None,
+        placeholder="Choose an item..."
+    )
+
+    if selected_item:
+        chosen = next(i for i in items if selected_item.startswith(i["name"]))
+
+        st.markdown(f"---\n### Manage: **{chosen['name']}**")
+        new_name = st.text_input("Edit Name", value
