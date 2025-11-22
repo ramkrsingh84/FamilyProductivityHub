@@ -24,7 +24,18 @@ def register():
     password = st.text_input("Password (register)", type="password")
     if st.button("Register"):
         try:
+            # Step 1: Register user in Supabase Auth
             user = supabase.auth.sign_up({"email": email, "password": password})
+
+            # Step 2: Insert into app_users table
+            if user.user:  # ensure signup succeeded
+                supabase.table("app_users").insert({
+                    "auth_id": user.user.id,          # link to auth.users
+                    "name": email.split("@")[0],      # simple default name
+                    "role": "member",                 # default role
+                    "family_id": None                 # can be set later
+                }).execute()
+
             st.success("Registered successfully! Please login.")
         except Exception as e:
             st.error(f"Registration failed: {e}")
