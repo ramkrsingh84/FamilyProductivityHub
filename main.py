@@ -66,25 +66,38 @@ def login():
 # --- Register ---
 def register():
     st.subheader("Register")
-    name = st.text_input("Full Name")   # ✅ new field for name
+    name = st.text_input("Full Name")   # ✅ independent name field
     email = st.text_input("Email (register)")
     password = st.text_input("Password (register)", type="password")
 
     if st.button("Register"):
         try:
+            # Step 1: Sign up user in Supabase Auth
             user = supabase.auth.sign_up({"email": email, "password": password})
+
             if user.user:
+                auth_id = user.user.id  # ✅ this is the UUID in auth.users
+
+                # Step 2: Verify that the user exists in auth.users
+                check = supabase.table("auth.users").select("id").eq("id", auth_id).execute()
+                if not check.data:
+                    st.error("Registration failed: Auth user not found in auth.users.")
+                    return
+
+                # Step 3: Insert into app_users with friendly name
                 supabase.table("app_users").insert({
-                    "auth_id": user.user.id,
-                    "name": name if name else email.split("@")[0],  # ✅ use entered name, fallback to email prefix
+                    "auth_id": auth_id,
+                    "name": name if name else email.split("@")[0],  # ✅ use entered name
                     "role": "member",
                     "family_id": None
                 }).execute()
+
                 st.success("Registered successfully! Please login.")
             else:
-                st.error("Registration failed: No user returned")
+                st.error("Registration failed: No user returned from Supabase.")
         except Exception as e:
             st.error(f"Registration failed: {e}")
+
 
 # --- Family Management ---
 def family_module():
@@ -244,7 +257,7 @@ def main():
             register()
     else:
         user_name = get_user_name()
-        st.write(f"👋 Welcome, **{user_name}**")
+        st.write(f"👋 Welcome, **{user_name}**")   # ✅ friendly greeting
         menu = st.sidebar.radio("Menu", ["Family", "Groceries", "Tasks", "Logout"])
         if menu == "Family":
             family_module()
