@@ -130,9 +130,22 @@ def grocery_module():
             st.error("No family linked to your account. Please create or join a family first.")
 
     st.write("Current Grocery List:")
+    family_id = get_family_id()
     if family_id:
         data = supabase.table("groceries").select("*").eq("family_id", family_id).execute()
-        st.table(data.data)
+        groceries = data.data
+
+        # Replace UUIDs with friendly names
+        for g in groceries:
+            # Lookup added_by user name
+            user_lookup = supabase.table("app_users").select("name").eq("id", g["added_by"]).execute()
+            g["added_by_name"] = user_lookup.data[0]["name"] if user_lookup.data else "Unknown"
+
+            # Format timestamp nicely
+            g["created_at"] = str(g["created_at"]).split("T")[0]  # just date
+
+        st.table(groceries)
+
 
 # --- Task Management ---
 def task_module():
