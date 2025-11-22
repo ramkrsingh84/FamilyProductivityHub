@@ -1,4 +1,6 @@
 import streamlit as st
+import pandas as pd
+from datetime import datetime
 from supabase_client import supabase
 
 # --- Session State for Auth ---
@@ -10,7 +12,6 @@ st.set_page_config(
     page_icon="🛒"
 )
 
-
 st.markdown(
     """
     <link rel="manifest" href="manifest.json">
@@ -18,8 +19,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-
-# --- Helper: Get family_id for current user ---
+# --- Helpers ---
 def get_family_id():
     result = supabase.table("app_users").select("family_id").eq("auth_id", st.session_state["user"].id).execute()
     if result.data and result.data[0]["family_id"]:
@@ -27,11 +27,16 @@ def get_family_id():
     return None
 
 def get_app_user():
-    result = supabase.table("app_users").select("id, family_id").eq("auth_id", st.session_state["user"].id).execute()
+    result = supabase.table("app_users").select("id, family_id, name").eq("auth_id", st.session_state["user"].id).execute()
     if result.data:
         return result.data[0]
     return None
 
+def format_timestamp(ts):
+    try:
+        return datetime.fromisoformat(ts.replace("Z", "+00:00")).strftime("%d-%m-%Y %H:%M")
+    except:
+        return ts
 
 # --- Login ---
 def login():
@@ -75,7 +80,6 @@ def register():
 def family_module():
     st.subheader("Family Management")
 
-    # Create Family
     fam_name = st.text_input("Family Name")
     if st.button("Create Family"):
         family = supabase.table("families").insert({
@@ -90,7 +94,6 @@ def family_module():
             }).eq("auth_id", st.session_state["user"].id).execute()
             st.success(f"Family '{fam_name}' created! Share ID: {fam_id}")
 
-    # Join Family
     fam_id = st.text_input("Enter Family ID to join")
     if st.button("Join Family"):
         supabase.table("app_users").update({
@@ -108,12 +111,8 @@ def grocery_module():
     must_buy_next = st.checkbox("Must buy next visit")
 
     app_user = get_app_user()
-    if app_user:
-        family_id = app_user["family_id"]
-        app_user_id = app_user["id"]
-    else:
-        family_id = None
-        app_user_id = None
+    family_id = app_user["family_id"] if app_user else None
+    app_user_id = app_user["id"] if app_user else None
 
     if st.button("Add Grocery"):
         if family_id and app_user_id:
@@ -123,29 +122,24 @@ def grocery_module():
                 "unit_type": unit_type,
                 "must_buy_next": must_buy_next,
                 "family_id": family_id,
-                "added_by": app_user_id   # ✅ use app_users.id
+                "added_by": app_user_id
             }).execute()
             st.success("Item added!")
         else:
             st.error("No family linked to your account. Please create or join a family first.")
 
     st.write("Current Grocery List:")
-    family_id = get_family_id()
     if family_id:
         data = supabase.table("groceries").select("*").eq("family_id", family_id).execute()
         groceries = data.data
 
-        # Replace UUIDs with friendly names
         for g in groceries:
-            # Lookup added_by user name
             user_lookup = supabase.table("app_users").select("name").eq("id", g["added_by"]).execute()
-            g["added_by_name"] = user_lookup.data[0]["name"] if user_lookup.data else "Unknown"
+            g["added_by"] = user_lookup.data[0]["name"] if user_lookup.data else "Unknown"
+            g["created_at"] = format_timestamp(g["created_at"])
 
-            # Format timestamp nicely
-            g["created_at"] = str(g["created_at"]).split("T")[0]  # just date
-
-        st.table(groceries)
-
+        df = pd.DataFrame(groceries)
+        st.dataframe(df)
 
 # --- Task Management ---
 def task_module():
@@ -153,29 +147,42 @@ def task_module():
     title = st.text_input("Task title")
     description = st.text_area("Description")
     due_date = st.date_input("Due date")
-    assigned_to = st.text_input("Assign to (user id)")
     status = st.selectbox("Status", ["pending", "completed"])
 
     family_id = get_family_id()
 
+    # Dropdown of family members
+    members = supabase.table("app_users").select("id, name").eq("family_id", family_id).execute()
+    member_options = {m["name"]: m["id"] for m in members.data} if members.data else {}
+    assigned_to_name = st.selectbox("Assign to", list(member_options.keys())) if member_options else None
+
     if st.button("Add Task"):
-        if family_id:
+        if family_id and assigned_to_name:
             supabase.table("tasks").insert({
                 "title": title,
                 "description": description,
                 "due_date": str(due_date),
-                "assigned_to": assigned_to,
+                "assigned_to": member_options[assigned_to_name],
                 "family_id": family_id,
                 "status": status
             }).execute()
             st.success("Task added!")
         else:
-            st.error("No family linked to your account. Please create or join a family first.")
+            st.error("No family linked to your account or no members found.")
 
     st.write("My Tasks:")
     if family_id:
         data = supabase.table("tasks").select("*").eq("family_id", family_id).execute()
-        st.table(data.data)
+        tasks = data.data
+
+        for t in tasks:
+            if t["assigned_to"]:
+                user_lookup = supabase.table("app_users").select("name").eq("id", t["assigned_to"]).execute()
+                t["assigned_to"] = user_lookup.data[0]["name"] if user_lookup.data else "Unknown"
+            t["created_at"] = format_timestamp(t["created_at"])
+
+        df = pd.DataFrame(tasks)
+        st.dataframe(df)
 
 # --- Main App ---
 def main():
