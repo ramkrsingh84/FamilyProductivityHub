@@ -1,7 +1,7 @@
 import streamlit as st
+import pandas as pd
 from supabase_client import supabase
 from helpers import get_family_id
-import pandas as pd
 
 def database_module():
     st.subheader("Database of Items")
@@ -33,7 +33,6 @@ def database_module():
         return
 
     # Display aligned table
-    st.write("### Current Database Items")
     df = pd.DataFrame([{
         "Item": i["name"],
         "Unit Type": i["default_unit"],
@@ -43,7 +42,7 @@ def database_module():
 
     # Selection dropdown
     selected_item = st.selectbox(
-        "Select an item to modify/delete",
+        "Select an item to manage",
         options=[f"{i['name']} ({i['default_unit']} {i['default_weight_unit'] or ''})" for i in items],
         index=None,
         placeholder="Choose an item..."
@@ -63,7 +62,7 @@ def database_module():
                                               if chosen["default_weight_unit"] else 0),
                                        key=f"wunit_{chosen['id']}")
 
-        cols = st.columns([1,1])
+        cols = st.columns([1,1,1])
         if cols[0].button("Update", key=f"update_{chosen['id']}"):
             supabase.table("database_items").update({
                 "name": new_name,
@@ -77,3 +76,13 @@ def database_module():
             supabase.table("database_items").delete().eq("id", chosen["id"]).execute()
             st.warning(f"{chosen['name']} deleted from Database")
             st.rerun()
+
+        if cols[2].button("Copy to Buy List", key=f"copy_{chosen['id']}"):
+            supabase.table("buy_list").insert({
+                "item_id": chosen["id"],
+                "quantity": 1,
+                "unit_type": chosen["default_unit"],
+                "weight_unit": chosen["default_weight_unit"],
+                "family_id": family_id
+            }).execute()
+            st.success(f"{chosen['name']} copied to Buy List")
