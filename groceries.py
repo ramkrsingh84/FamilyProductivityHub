@@ -48,40 +48,32 @@ def grocery_module():
         data = supabase.table("groceries").select("*").eq("family_id", family_id).execute()
         groceries = data.data
 
-        for g in groceries:
-            # Lookup added_by user name but keep UUID intact
-            user_lookup = supabase.table("app_users").select("name").eq("id", g["added_by"]).execute()
-            g["added_by_name"] = user_lookup.data[0]["name"] if user_lookup.data else "Unknown"
-            g["created_at"] = format_timestamp(g["created_at"])
+        if groceries:
+            for g in groceries:
+                # Lookup added_by name but keep UUID intact
+                user_lookup = supabase.table("app_users").select("name").eq("id", g["added_by"]).execute()
+                g["added_by_name"] = user_lookup.data[0]["name"] if user_lookup.data else "Unknown"
+                g["created_at"] = format_timestamp(g["created_at"])
 
-            # Display unit nicely
-            if g["unit_type"] == "piece":
-                g["unit_display"] = f"{g['quantity']} pieces"
-            elif g["unit_type"] == "weight":
-                if g.get("weight_unit"):
-                    g["unit_display"] = f"{g['quantity']} {g['weight_unit']}"
-                else:
-                    g["unit_display"] = f"{g['quantity']} (weight)"
-            else:
-                g["unit_display"] = str(g["quantity"])
-
-            # Show item + Mark Purchased button
-            col1, col2 = st.columns([3,1])
-            with col1:
-                st.write(f"{g['name']} - {g['unit_display']} (Added by {g['added_by_name']})")
-            with col2:
-                if st.button("Mark Purchased", key=f"purchase_{g['id']}"):
-                    supabase.table("stock_list").insert({
-                        "grocery_id": g["id"],
-                        "name": g["name"],
-                        "quantity": g["quantity"],
-                        "unit_type": g["unit_type"],
-                        "weight_unit": g.get("weight_unit"),
-                        "family_id": g["family_id"],
-                        "added_by": g["added_by"]   # ✅ still UUID
-                    }).execute()
-                    supabase.table("groceries").delete().eq("id", g["id"]).execute()
-                    st.success(f"{g['name']} moved to Stock List")
+                # Display row with inline button
+                col1, col2, col3 = st.columns([3,2,1])
+                with col1:
+                    st.write(f"{g['name']} - {g['quantity']} {g.get('weight_unit') or ''}")
+                with col2:
+                    st.write(f"Added by {g['added_by_name']} on {g['created_at']}")
+                with col3:
+                    if st.button("Mark Purchased", key=f"purchase_{g['id']}"):
+                        supabase.table("stock_list").insert({
+                            "grocery_id": g["id"],
+                            "name": g["name"],
+                            "quantity": g["quantity"],
+                            "unit_type": g["unit_type"],
+                            "weight_unit": g.get("weight_unit"),
+                            "family_id": g["family_id"],
+                            "added_by": g["added_by"]
+                        }).execute()
+                        supabase.table("groceries").delete().eq("id", g["id"]).execute()
+                        st.success(f"{g['name']} moved to Stock List")
 
         import pandas as pd
         df = pd.DataFrame(groceries)
