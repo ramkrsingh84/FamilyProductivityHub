@@ -23,11 +23,13 @@ def main():
     else:
         user_name = get_user_name()
         st.write(f"👋 Welcome, **{user_name}**")
-        menu = st.sidebar.radio("Menu", ["Family", "Groceries", "Stock List", "Tasks", "Logout"])
+        menu = st.sidebar.radio("Menu", ["Family", "Groceries", "Database", "Buy List", "Stock List", "Tasks", "Logout"])
         if menu == "Family":
             family_module()
-        elif menu == "Groceries":
-            grocery_module()
+        if menu == "Database":
+            database_module()
+        elif menu == "Buy List":
+            buylist_module()
         elif menu == "Stock List":
             stock_module()
         elif menu == "Tasks":
