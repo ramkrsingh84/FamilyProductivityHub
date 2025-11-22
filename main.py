@@ -134,11 +134,20 @@ def grocery_module():
         groceries = data.data
 
         for g in groceries:
+            # Lookup family name
+            fam_lookup = supabase.table("families").select("name").eq("id", g["family_id"]).execute()
+            g["family_name"] = fam_lookup.data[0]["name"] if fam_lookup.data else "Unknown"
+
+            # Lookup user name
             user_lookup = supabase.table("app_users").select("name").eq("id", g["added_by"]).execute()
             g["added_by"] = user_lookup.data[0]["name"] if user_lookup.data else "Unknown"
+
+            # Format timestamp
             g["created_at"] = format_timestamp(g["created_at"])
 
         df = pd.DataFrame(groceries)
+        # Drop raw UUIDs
+        df = df.drop(columns=["id", "family_id"], errors="ignore")
         st.dataframe(df)
 
 # --- Task Management ---
@@ -176,12 +185,20 @@ def task_module():
         tasks = data.data
 
         for t in tasks:
+            # Lookup family name
+            fam_lookup = supabase.table("families").select("name").eq("id", t["family_id"]).execute()
+            t["family_name"] = fam_lookup.data[0]["name"] if fam_lookup.data else "Unknown"
+
+            # Lookup assigned user name
             if t["assigned_to"]:
                 user_lookup = supabase.table("app_users").select("name").eq("id", t["assigned_to"]).execute()
                 t["assigned_to"] = user_lookup.data[0]["name"] if user_lookup.data else "Unknown"
+
+            # Format timestamp
             t["created_at"] = format_timestamp(t["created_at"])
 
         df = pd.DataFrame(tasks)
+        df = df.drop(columns=["id", "family_id"], errors="ignore")
         st.dataframe(df)
 
 # --- Main App ---
