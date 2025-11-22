@@ -13,10 +13,15 @@ def login():
     if st.button("Login"):
         try:
             user = supabase.auth.sign_in_with_password({"email": email, "password": password})
-            st.session_state["user"] = user
-            st.success("Logged in successfully!")
+            if user.user:  # ensure login succeeded
+                st.session_state["user"] = user.user
+                st.success("Logged in successfully!")
+                st.experimental_rerun()  # force app to reload into main menu
+            else:
+                st.error("Login failed: No user returned")
         except Exception as e:
             st.error(f"Login failed: {e}")
+
 
 def register():
     st.subheader("Register")
@@ -24,21 +29,20 @@ def register():
     password = st.text_input("Password (register)", type="password")
     if st.button("Register"):
         try:
-            # Step 1: Register user in Supabase Auth
             user = supabase.auth.sign_up({"email": email, "password": password})
-
-            # Step 2: Insert into app_users table
-            if user.user:  # ensure signup succeeded
+            if user.user:
                 supabase.table("app_users").insert({
-                    "auth_id": user.user.id,          # link to auth.users
-                    "name": email.split("@")[0],      # simple default name
-                    "role": "member",                 # default role
-                    "family_id": None                 # can be set later
+                    "auth_id": user.user.id,
+                    "name": email.split("@")[0],
+                    "role": "member",
+                    "family_id": None
                 }).execute()
-
-            st.success("Registered successfully! Please login.")
+                st.success("Registered successfully! Please login.")
+            else:
+                st.error("Registration failed: No user returned")
         except Exception as e:
             st.error(f"Registration failed: {e}")
+
 
 # --- Grocery Management ---
 def grocery_module():
@@ -106,6 +110,8 @@ def main():
         elif menu == "Logout":
             st.session_state["user"] = None
             st.success("Logged out!")
+            st.experimental_rerun()
+
 
 if __name__ == "__main__":
     main()
