@@ -1,7 +1,7 @@
 import streamlit as st
 from datetime import datetime
 from supabase_client import supabase
-from helpers import get_app_user, format_timestamp
+from helpers import get_family_id, format_timestamp
 
 
 # --- Task Management ---
