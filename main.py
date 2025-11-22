@@ -37,6 +37,12 @@ def format_timestamp(ts):
         return datetime.fromisoformat(ts.replace("Z", "+00:00")).strftime("%d-%m-%Y %H:%M")
     except:
         return ts
+        
+def get_user_name():
+    result = supabase.table("app_users").select("name").eq("auth_id", st.session_state["user"].id).execute()
+    if result.data and result.data[0]["name"]:
+        return result.data[0]["name"]
+    return st.session_state["user"].email  # fallback
 
 # --- Login ---
 def login():
@@ -58,15 +64,17 @@ def login():
 # --- Register ---
 def register():
     st.subheader("Register")
+    name = st.text_input("Full Name")   # ✅ new field for name
     email = st.text_input("Email (register)")
     password = st.text_input("Password (register)", type="password")
+
     if st.button("Register"):
         try:
             user = supabase.auth.sign_up({"email": email, "password": password})
             if user.user:
                 supabase.table("app_users").insert({
                     "auth_id": user.user.id,
-                    "name": email.split("@")[0],
+                    "name": name if name else email.split("@")[0],  # ✅ use entered name, fallback to email prefix
                     "role": "member",
                     "family_id": None
                 }).execute()
@@ -233,7 +241,8 @@ def main():
         else:
             register()
     else:
-        st.write(f"👋 Welcome, **{st.session_state['user'].email}**")
+        user_name = get_user_name()
+        st.write(f"👋 Welcome, **{user_name}**")
         menu = st.sidebar.radio("Menu", ["Family", "Groceries", "Tasks", "Logout"])
         if menu == "Family":
             family_module()
