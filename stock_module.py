@@ -10,7 +10,7 @@ def stock_module():
         st.error("No family linked to your account.")
         return
 
-    data = supabase.table("stock_list").select("*, database_items(name)").eq("family_id", family_id).execute()
+    data = supabase.table("stock_list").select("*, groceries(name)").eq("family_id", family_id).execute()
     stock_items = data.data
 
     if not stock_items:
@@ -19,36 +19,57 @@ def stock_module():
 
     # Build aligned table
     df = pd.DataFrame([{
-        "Item": s["database_items"]["name"],
+        "Item": s["groceries"]["name"] if s.get("groceries") else s["name"],
         "Quantity": s["quantity"],
+        "Unit Type": s.get("unit_type", ""),
+        "Weight Unit": s.get("weight_unit", ""),
         "Purchased": format_timestamp(s.get("purchased_date")),
         "Status": s["status"]
     } for s in stock_items])
-    st.dataframe(df, width="stretch")
+    st.dataframe(df, use_container_width=True)
 
-    # Interactive controls below each row
-    for s in stock_items:
-        st.markdown(f"---\n**{s['database_items']['name']}**")
+    # Selection dropdown
+    selected_item = st.selectbox(
+        "Select an item to manage",
+        options=[f"{(s['groceries']['name'] if s.get('groceries') else s['name'])} "
+                 f"(Qty: {s['quantity']}, {s.get('unit_type','')} {s.get('weight_unit','')})"
+                 for s in stock_items],
+        index=None,
+        placeholder="Choose an item..."
+    )
+
+    if selected_item:
+        chosen = next(s for s in stock_items if selected_item.startswith(
+            s["groceries"]["name"] if s.get("groceries") else s["name"]
+        ))
+
+        st.markdown(f"---\n### Manage: **{chosen['groceries']['name'] if chosen.get('groceries') else chosen['name']}**")
+
+        # Quantity update
         new_qty = st.number_input(
-            "Qty", value=float(s["quantity"]), step=1.0,
-            key=f"qty_{s['id']}", label_visibility="collapsed"
+            "Qty", value=float(chosen["quantity"]), step=1.0,
+            key=f"qty_{chosen['id']}", label_visibility="collapsed"
         )
+
+        # Status update
         new_status = st.selectbox(
             "Status", ["available","reducing","exhausted"],
-            index=["available","reducing","exhausted"].index(s["status"]),
-            key=f"status_{s['id']}"
+            index=["available","reducing","exhausted"].index(chosen["status"]),
+            key=f"status_{chosen['id']}"
         )
 
         cols = st.columns([1,1])
-        if cols[0].button("Update Qty", key=f"update_{s['id']}"):
-            supabase.table("stock_list").update({"quantity": new_qty}).eq("id", s["id"]).execute()
-            st.success(f"{s['database_items']['name']} stock updated to {new_qty}")
+        if cols[0].button("Update Qty", key=f"update_{chosen['id']}"):
+            supabase.table("stock_list").update({"quantity": new_qty}).eq("id", chosen["id"]).execute()
+            st.success(f"{chosen['name']} stock updated to {new_qty}")
+            st.rerun()
 
-        if new_status != s["status"]:
-            supabase.table("stock_list").update({"status": new_status}).eq("id", s["id"]).execute()
-            st.success(f"Status updated for {s['database_items']['name']}")
+        if cols[1].button("Update Status", key=f"statusbtn_{chosen['id']}"):
+            supabase.table("stock_list").update({"status": new_status}).eq("id", chosen["id"]).execute()
+            st.success(f"Status updated for {chosen['name']}")
 
             # ✅ If exhausted, delete entry
             if new_status == "exhausted":
-                supabase.table("stock_list").delete().eq("id", s["id"]).execute()
-                st.warning(f"{s['database_items']['name']} removed from Stock List (exhausted)")
+                supabase.table("stock_list").delete().eq("id", chosen["id"]).execute()
+                st.warning(f"{chosen['name']} removed from Stock List (exhausted)")
+            st.rerun()
