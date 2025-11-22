@@ -66,28 +66,21 @@ def login():
 # --- Register ---
 def register():
     st.subheader("Register")
-    name = st.text_input("Full Name")   # ✅ independent name field
+    name = st.text_input("Full Name")
     email = st.text_input("Email (register)")
     password = st.text_input("Password (register)", type="password")
 
     if st.button("Register"):
         try:
-            # Step 1: Sign up user in Supabase Auth
             user = supabase.auth.sign_up({"email": email, "password": password})
 
             if user.user:
-                auth_id = user.user.id  # ✅ this is the UUID in auth.users
+                auth_id = user.user.id  # ✅ this is the UUID from Supabase Auth
 
-                # Step 2: Verify that the user exists in auth.users
-                check = supabase.table("auth.users").select("id").eq("id", auth_id).execute()
-                if not check.data:
-                    st.error("Registration failed: Auth user not found in auth.users.")
-                    return
-
-                # Step 3: Insert into app_users with friendly name
+                # Insert directly into app_users (no need to query auth.users)
                 supabase.table("app_users").insert({
                     "auth_id": auth_id,
-                    "name": name if name else email.split("@")[0],  # ✅ use entered name
+                    "name": name if name else email.split("@")[0],
                     "role": "member",
                     "family_id": None
                 }).execute()
