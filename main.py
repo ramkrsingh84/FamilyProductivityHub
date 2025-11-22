@@ -5,6 +5,12 @@ from supabase_client import supabase
 if "user" not in st.session_state:
     st.session_state["user"] = None
 
+st.set_page_config(
+    page_title="Family Productivity Hub",
+    page_icon="🛒"
+)
+
+
 st.markdown(
     """
     <link rel="manifest" href="manifest.json">
