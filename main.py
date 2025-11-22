@@ -111,13 +111,11 @@ def grocery_module():
     # First dropdown: piece or weight
     unit_type = st.selectbox("Unit type", ["piece", "weight"])
 
-    # Second dropdown: only shown if weight is selected
-    weight_unit = None
-    if unit_type == "weight":
-        weight_unit = st.selectbox(
-            "Select weight unit",
-            ["kg", "gram", "liter", "ml", "ounce", "pound"]
-        )
+    # Second dropdown: always visible, optional
+    weight_unit = st.selectbox(
+        "Select unit (optional)",
+        ["", "kg", "gram", "liter", "ml", "ounce", "pound"]
+    )
 
     must_buy_next = st.checkbox("Must buy next visit")
 
@@ -135,7 +133,7 @@ def grocery_module():
                 "name": name,
                 "quantity": quantity,
                 "unit_type": unit_type,
-                "weight_unit": weight_unit if unit_type == "weight" else None,
+                "weight_unit": weight_unit if weight_unit else None,  # ✅ store only if chosen
                 "must_buy_next": must_buy_next,
                 "family_id": family_id,
                 "added_by": app_user_id
@@ -157,14 +155,18 @@ def grocery_module():
 
             # Display unit nicely
             if g["unit_type"] == "piece":
-                g["unit_display"] = "pieces"
-            elif g["unit_type"] == "weight" and g.get("weight_unit"):
-                g["unit_display"] = g["weight_unit"]
+                g["unit_display"] = f"{g['quantity']} pieces"
+            elif g["unit_type"] == "weight":
+                if g.get("weight_unit"):
+                    g["unit_display"] = f"{g['quantity']} {g['weight_unit']}"
+                else:
+                    g["unit_display"] = f"{g['quantity']} (weight)"
             else:
-                g["unit_display"] = g["unit_type"]
+                g["unit_display"] = str(g["quantity"])
 
         import pandas as pd
         df = pd.DataFrame(groceries)
+        # Drop raw UUIDs and internal columns
         df = df.drop(columns=["id", "family_id", "unit_type", "weight_unit"], errors="ignore")
         st.dataframe(df)
            
