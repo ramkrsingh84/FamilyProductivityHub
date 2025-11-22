@@ -73,11 +73,9 @@ def register():
     if st.button("Register"):
         try:
             user = supabase.auth.sign_up({"email": email, "password": password})
-
             if user.user:
-                auth_id = user.user.id  # ✅ this is the UUID from Supabase Auth
+                auth_id = user.user.id
 
-                # Insert directly into app_users (no need to query auth.users)
                 supabase.table("app_users").insert({
                     "auth_id": auth_id,
                     "name": name if name else email.split("@")[0],
