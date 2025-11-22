@@ -21,6 +21,7 @@ def buylist_module():
         if col3.button("Mark Purchased", key=f"purchase_{b['id']}"):
             supabase.table("stock_list").insert({
                 "item_id": b["item_id"],
+                "name": b["database_items"]["name"],   # ✅ add name
                 "quantity": b["quantity"],
                 "family_id": b["family_id"]
             }).execute()
