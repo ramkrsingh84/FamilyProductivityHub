@@ -24,7 +24,7 @@ def stock_module():
         "Purchased": format_timestamp(s.get("purchased_date")),
         "Status": s["status"]
     } for s in stock_items])
-    st.dataframe(df, use_container_width=True)
+    st.dataframe(df, width="stretch")
 
     # Interactive controls below each row
     for s in stock_items:
