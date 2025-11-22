@@ -52,4 +52,27 @@ def database_module():
         chosen = next(i for i in items if selected_item.startswith(i["name"]))
 
         st.markdown(f"---\n### Manage: **{chosen['name']}**")
-        new_name = st.text_input("Edit Name", value
+        new_name = st.text_input("Edit Name", value=chosen["name"], key=f"name_{chosen['id']}")
+        new_unit = st.selectbox("Edit Unit Type", ["piece","weight"],
+                                index=["piece","weight"].index(chosen["default_unit"]),
+                                key=f"unit_{chosen['id']}")
+        new_weight_unit = st.selectbox("Edit Weight Unit",
+                                       ["","kg","gram","liter","ml","ounce","pound"],
+                                       index=(["","kg","gram","liter","ml","ounce","pound"].index(chosen["default_weight_unit"])
+                                              if chosen["default_weight_unit"] else 0),
+                                       key=f"wunit_{chosen['id']}")
+
+        cols = st.columns([1,1])
+        if cols[0].button("Update", key=f"update_{chosen['id']}"):
+            supabase.table("database_items").update({
+                "name": new_name,
+                "default_unit": new_unit,
+                "default_weight_unit": new_weight_unit if new_weight_unit else None
+            }).eq("id", chosen["id"]).execute()
+            st.success(f"{chosen['name']} updated")
+            st.rerun()
+
+        if cols[1].button("Delete", key=f"delete_{chosen['id']}"):
+            supabase.table("database_items").delete().eq("id", chosen["id"]).execute()
+            st.warning(f"{chosen['name']} deleted from Database")
+            st.rerun()
