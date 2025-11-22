@@ -74,11 +74,4 @@ def grocery_module():
                         }).execute()
                         supabase.table("groceries").delete().eq("id", g["id"]).execute()
                         st.success(f"{g['name']} moved to Stock List")
-
-        import pandas as pd
-        df = pd.DataFrame(groceries)
-        # Drop raw UUIDs and internal columns
-        df = df.drop(columns=["id", "family_id", "unit_type", "weight_unit", "added_by"], errors="ignore")
-        # Keep added_by_name for display
-        st.dataframe(df)
            

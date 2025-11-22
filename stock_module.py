@@ -51,10 +51,3 @@ def stock_module():
                     }).execute()
                     supabase.table("stock_list").delete().eq("id", s["id"]).execute()
                     st.warning(f"{s['name']} moved back to Buy List")
-
-
-    # Optional: show table view
-    if stock_items:
-        df = pd.DataFrame(stock_items)
-        df = df.drop(columns=["id","family_id","unit_type","weight_unit","added_by","grocery_id"], errors="ignore")
-        st.dataframe(df)
