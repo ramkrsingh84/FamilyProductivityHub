@@ -1,4 +1,5 @@
 import streamlit as st
+import pandas as pd
 from supabase_client import supabase
 from helpers import get_family_id
 
@@ -12,19 +13,43 @@ def buylist_module():
     data = supabase.table("buy_list").select("*, database_items(name)").eq("family_id", family_id).execute()
     buy_items = data.data
 
+    if not buy_items:
+        st.info("No items in Buy List")
+        return
+
+    # Build a DataFrame for aligned display
+    df = pd.DataFrame([{
+        "Item": b["database_items"]["name"],
+        "Quantity": b["quantity"],
+        "Update Qty": "",       # placeholder for widget
+        "Action": ""            # placeholder for widget
+    } for b in buy_items])
+
+    st.write("### Current Buy List")
+    st.table(df)  # static aligned table
+
+    # Interactive controls below the table
     for b in buy_items:
-        col1, col2, col3 = st.columns([3,2,2])
-        col1.write(b["database_items"]["name"])
-        new_qty = col2.number_input("Qty", value=float(b["quantity"]), step=1.0, key=f"qty_{b['id']}")
-        if col2.button("Update", key=f"update_{b['id']}"):
+        st.markdown("---")
+        st.write(f"**{b['database_items']['name']}**")
+        new_qty = st.number_input(
+            "Qty", 
+            value=float(b["quantity"]), 
+            step=1.0, 
+            key=f"qty_{b['id']}", 
+            label_visibility="collapsed"
+        )
+        cols = st.columns([1,1])
+        if cols[0].button("Update", key=f"update_{b['id']}"):
             supabase.table("buy_list").update({"quantity": new_qty}).eq("id", b["id"]).execute()
-        if col3.button("Mark Purchased", key=f"purchase_{b['id']}"):
+            st.success(f"{b['database_items']['name']} quantity updated")
+        if cols[1].button("Mark Purchased", key=f"purchase_{b['id']}"):
             supabase.table("stock_list").insert({
                 "item_id": b["item_id"],
-                "name": b["database_items"]["name"],   # if you kept name
+                "name": b["database_items"]["name"],
                 "quantity": b["quantity"],
-                "unit_type": b.get("unit_type", "piece"),   # ✅ include unit_type
-                "weight_unit": b.get("weight_unit"),        # optional
+                "unit_type": b.get("unit_type", "piece"),
+                "weight_unit": b.get("weight_unit"),
                 "family_id": b["family_id"]
             }).execute()
             supabase.table("buy_list").delete().eq("id", b["id"]).execute()
