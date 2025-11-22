@@ -5,6 +5,8 @@ from tasks import task_module
 from helpers import get_user_name
 from stock_module import stock_module
 from database_module import database_module
+from buylist_module import buylist_module
+
 
 if "user" not in st.session_state:
     st.session_state["user"] = None
