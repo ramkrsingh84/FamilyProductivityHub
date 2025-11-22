@@ -4,6 +4,7 @@ from family import family_module
 from tasks import task_module
 from helpers import get_user_name
 from stock_module import stock_module
+from database_module import database_module
 
 if "user" not in st.session_state:
     st.session_state["user"] = None
