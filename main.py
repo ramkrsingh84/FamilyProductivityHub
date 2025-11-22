@@ -107,19 +107,29 @@ def grocery_module():
     st.subheader("Grocery Stock Management")
     name = st.text_input("Item name")
     quantity = st.number_input("Quantity", min_value=0.0, step=1.0)
-    unit_type = st.selectbox("Unit type", ["piece", "weight"])
+
+    # Common unit dropdown (can be left empty)
+    unit = st.selectbox(
+        "Unit (optional)",
+        ["", "piece", "kg", "gram", "liter", "ml", "ounce", "pound"]
+    )
+
     must_buy_next = st.checkbox("Must buy next visit")
 
     app_user = get_app_user()
-    family_id = app_user["family_id"] if app_user else None
-    app_user_id = app_user["id"] if app_user else None
+    if app_user:
+        family_id = app_user["family_id"]
+        app_user_id = app_user["id"]
+    else:
+        family_id = None
+        app_user_id = None
 
     if st.button("Add Grocery"):
         if family_id and app_user_id:
             supabase.table("groceries").insert({
                 "name": name,
                 "quantity": quantity,
-                "unit_type": unit_type,
+                "unit": unit if unit else None,   # ✅ store unit only if chosen
                 "must_buy_next": must_buy_next,
                 "family_id": family_id,
                 "added_by": app_user_id
@@ -129,24 +139,21 @@ def grocery_module():
             st.error("No family linked to your account. Please create or join a family first.")
 
     st.write("Current Grocery List:")
+    family_id = get_family_id()
     if family_id:
         data = supabase.table("groceries").select("*").eq("family_id", family_id).execute()
         groceries = data.data
 
         for g in groceries:
-            # Lookup family name
-            fam_lookup = supabase.table("families").select("name").eq("id", g["family_id"]).execute()
-            g["family_name"] = fam_lookup.data[0]["name"] if fam_lookup.data else "Unknown"
-
-            # Lookup user name
+            # Lookup added_by user name
             user_lookup = supabase.table("app_users").select("name").eq("id", g["added_by"]).execute()
             g["added_by"] = user_lookup.data[0]["name"] if user_lookup.data else "Unknown"
-
-            # Format timestamp
             g["created_at"] = format_timestamp(g["created_at"])
 
+            # If unit is empty, show "N/A"
+            g["unit"] = g["unit"] if g.get("unit") else "N/A"
+
         df = pd.DataFrame(groceries)
-        # Drop raw UUIDs
         df = df.drop(columns=["id", "family_id"], errors="ignore")
         st.dataframe(df)
 
