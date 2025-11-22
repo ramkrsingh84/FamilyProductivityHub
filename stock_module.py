@@ -9,7 +9,8 @@ def stock_module():
         st.error("No family linked to your account.")
         return
 
-    data = supabase.table("stock_list").select("*, database_items(name, default_unit, default_weight_unit)").eq("family_id", family_id).execute()
+    # Fetch stock items with linked database info
+    data = supabase.table("stock_list").select("*, database_items(name)").eq("family_id", family_id).execute()
     stock_items = data.data
 
     for s in stock_items:
@@ -24,9 +25,16 @@ def stock_module():
             index=["available","reducing","exhausted"].index(s["status"]),
             key=f"status_{s['id']}"
         )
+
+        # Update status
         if new_status != s["status"]:
             supabase.table("stock_list").update({"status": new_status}).eq("id", s["id"]).execute()
             st.success(f"Status updated for {s['database_items']['name']}")
+
+            # ✅ If exhausted, delete entry
+            if new_status == "exhausted":
+                supabase.table("stock_list").delete().eq("id", s["id"]).execute()
+                st.warning(f"{s['database_items']['name']} removed from Stock List (exhausted)")
 
         # Quantity update
         new_qty = col4.number_input("Qty", value=float(s["quantity"]), step=1.0, key=f"qty_{s['id']}")
