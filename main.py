@@ -1,7 +1,7 @@
 import streamlit as st
 from auth import login, register
 from family import family_module
-from tasks import task_module
+from tasks import tasklist_module
 from helpers import get_user_name
 from stock_module import stock_module
 from database_module import database_module
@@ -35,7 +35,7 @@ def main():
         elif menu == "Stock List":
             stock_module()
         elif menu == "Tasks":
-            task_module()
+            tasklist_module()
         elif menu == "Logout":
             st.session_state["user"] = None
             st.success("Logged out!")
