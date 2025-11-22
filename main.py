@@ -26,6 +26,13 @@ def get_family_id():
         return result.data[0]["family_id"]
     return None
 
+def get_app_user():
+    result = supabase.table("app_users").select("id, family_id").eq("auth_id", st.session_state["user"].id).execute()
+    if result.data:
+        return result.data[0]
+    return None
+
+
 # --- Login ---
 def login():
     st.subheader("Login")
@@ -100,17 +107,23 @@ def grocery_module():
     unit_type = st.selectbox("Unit type", ["piece", "weight"])
     must_buy_next = st.checkbox("Must buy next visit")
 
-    family_id = get_family_id()
+    app_user = get_app_user()
+    if app_user:
+        family_id = app_user["family_id"]
+        app_user_id = app_user["id"]
+    else:
+        family_id = None
+        app_user_id = None
 
     if st.button("Add Grocery"):
-        if family_id:
+        if family_id and app_user_id:
             supabase.table("groceries").insert({
                 "name": name,
                 "quantity": quantity,
                 "unit_type": unit_type,
                 "must_buy_next": must_buy_next,
                 "family_id": family_id,
-                "added_by": st.session_state["user"].id
+                "added_by": app_user_id   # ✅ use app_users.id
             }).execute()
             st.success("Item added!")
         else:
