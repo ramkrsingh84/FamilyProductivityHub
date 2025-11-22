@@ -5,6 +5,14 @@ from supabase_client import supabase
 if "user" not in st.session_state:
     st.session_state["user"] = None
 
+st.markdown(
+    """
+    <link rel="manifest" href="manifest.json">
+    """,
+    unsafe_allow_html=True
+)
+
+
 # --- Login ---
 def login():
     st.subheader("Login")
