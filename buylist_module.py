@@ -24,7 +24,7 @@ def buylist_module():
         "Unit Type": b.get("unit_type", b["database_items"].get("default_unit", "")),
         "Weight Unit": b.get("weight_unit", b["database_items"].get("default_weight_unit", ""))
     } for b in buy_items])
-    st.dataframe(df, use_container_width=True)
+    st.dataframe(df, width="stretch")
 
     # Selection dropdown
     selected_item = st.selectbox(

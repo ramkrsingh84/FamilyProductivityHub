@@ -25,13 +25,23 @@ def database_module():
     # Show items
     data = supabase.table("database_items").select("*").eq("family_id", family_id).execute()
     items = data.data
-    selected = st.multiselect("Select items to add to Buy List", [i["name"] for i in items])
+
+    # Build labels with unit info
+    options = {
+        f"{i['name']} ({i['default_unit']}{' '+i['default_weight_unit'] if i['default_weight_unit'] else ''})": i
+        for i in items
+    }
+
+    selected = st.multiselect("Select items to add to Buy List", list(options.keys()))
+
     if st.button("Add Selected to Buy List"):
-        for i in items:
-            if i["name"] in selected:
-                supabase.table("buy_list").insert({
-                    "item_id": i["id"],
-                    "quantity": 1,
-                    "family_id": family_id
-                }).execute()
+        for label in selected:
+            i = options[label]
+            supabase.table("buy_list").insert({
+                "item_id": i["id"],
+                "quantity": 1,
+                "unit_type": i["default_unit"],
+                "weight_unit": i["default_weight_unit"],
+                "family_id": family_id
+            }).execute()
         st.success("Items added to Buy List")
