@@ -49,9 +49,9 @@ def grocery_module():
         groceries = data.data
 
         for g in groceries:
-            # Lookup added_by user name
+            # Lookup added_by user name but keep UUID intact
             user_lookup = supabase.table("app_users").select("name").eq("id", g["added_by"]).execute()
-            g["added_by"] = user_lookup.data[0]["name"] if user_lookup.data else "Unknown"
+            g["added_by_name"] = user_lookup.data[0]["name"] if user_lookup.data else "Unknown"
             g["created_at"] = format_timestamp(g["created_at"])
 
             # Display unit nicely
@@ -68,7 +68,7 @@ def grocery_module():
             # Show item + Mark Purchased button
             col1, col2 = st.columns([3,1])
             with col1:
-                st.write(f"{g['name']} - {g['unit_display']} (Added by {g['added_by']})")
+                st.write(f"{g['name']} - {g['unit_display']} (Added by {g['added_by_name']})")
             with col2:
                 if st.button("Mark Purchased", key=f"purchase_{g['id']}"):
                     supabase.table("stock_list").insert({
@@ -78,12 +78,15 @@ def grocery_module():
                         "unit_type": g["unit_type"],
                         "weight_unit": g.get("weight_unit"),
                         "family_id": g["family_id"],
-                        "added_by": g["added_by"]
+                        "added_by": g["added_by"]   # ✅ still UUID
                     }).execute()
                     supabase.table("groceries").delete().eq("id", g["id"]).execute()
                     st.success(f"{g['name']} moved to Stock List")
 
         import pandas as pd
         df = pd.DataFrame(groceries)
-        df = df.drop(columns=["id", "family_id", "unit_type", "weight_unit"], errors="ignore")
+        # Drop raw UUIDs and internal columns
+        df = df.drop(columns=["id", "family_id", "unit_type", "weight_unit", "added_by"], errors="ignore")
+        # Keep added_by_name for display
         st.dataframe(df)
+           
