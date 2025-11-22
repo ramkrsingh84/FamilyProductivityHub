@@ -108,11 +108,16 @@ def grocery_module():
     name = st.text_input("Item name")
     quantity = st.number_input("Quantity", min_value=0.0, step=1.0)
 
-    # Common unit dropdown (can be left empty)
-    unit = st.selectbox(
-        "Unit (optional)",
-        ["", "piece", "kg", "gram", "liter", "ml", "ounce", "pound"]
-    )
+    # First dropdown: piece or weight
+    unit_type = st.selectbox("Unit type", ["piece", "weight"])
+
+    # Second dropdown: only shown if weight is selected
+    weight_unit = None
+    if unit_type == "weight":
+        weight_unit = st.selectbox(
+            "Select weight unit",
+            ["kg", "gram", "liter", "ml", "ounce", "pound"]
+        )
 
     must_buy_next = st.checkbox("Must buy next visit")
 
@@ -129,7 +134,8 @@ def grocery_module():
             supabase.table("groceries").insert({
                 "name": name,
                 "quantity": quantity,
-                "unit": unit if unit else None,   # ✅ store unit only if chosen
+                "unit_type": unit_type,
+                "weight_unit": weight_unit if unit_type == "weight" else None,
                 "must_buy_next": must_buy_next,
                 "family_id": family_id,
                 "added_by": app_user_id
@@ -139,7 +145,6 @@ def grocery_module():
             st.error("No family linked to your account. Please create or join a family first.")
 
     st.write("Current Grocery List:")
-    family_id = get_family_id()
     if family_id:
         data = supabase.table("groceries").select("*").eq("family_id", family_id).execute()
         groceries = data.data
@@ -150,12 +155,19 @@ def grocery_module():
             g["added_by"] = user_lookup.data[0]["name"] if user_lookup.data else "Unknown"
             g["created_at"] = format_timestamp(g["created_at"])
 
-            # If unit is empty, show "N/A"
-            g["unit"] = g["unit"] if g.get("unit") else "N/A"
+            # Display unit nicely
+            if g["unit_type"] == "piece":
+                g["unit_display"] = "pieces"
+            elif g["unit_type"] == "weight" and g.get("weight_unit"):
+                g["unit_display"] = g["weight_unit"]
+            else:
+                g["unit_display"] = g["unit_type"]
 
+        import pandas as pd
         df = pd.DataFrame(groceries)
-        df = df.drop(columns=["id", "family_id"], errors="ignore")
+        df = df.drop(columns=["id", "family_id", "unit_type", "weight_unit"], errors="ignore")
         st.dataframe(df)
+           
 
 # --- Task Management ---
 def task_module():
