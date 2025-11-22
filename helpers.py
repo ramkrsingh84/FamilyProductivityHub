@@ -25,3 +25,15 @@ def get_user_name():
     if result.data and result.data[0]["name"]:
         return result.data[0]["name"]
     return st.session_state["user"].email
+    
+def get_user_id():
+    """Return the current app_user.id for the logged-in user."""
+    # Assuming you store auth_id in session_state after login
+    auth_id = st.session_state.get("auth_id")
+    if not auth_id:
+        return None
+
+    data = supabase.table("app_users").select("id").eq("auth_id", auth_id).execute()
+    if data.data:
+        return data.data[0]["id"]
+    return None
