@@ -27,6 +27,8 @@ def main():
             family_module()
         elif menu == "Groceries":
             grocery_module()
+        elif menu == "Stock List":
+            stock_module()
         elif menu == "Tasks":
             task_module()
         elif menu == "Logout":

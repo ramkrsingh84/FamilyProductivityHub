@@ -34,7 +34,7 @@ def grocery_module():
                 "name": name,
                 "quantity": quantity,
                 "unit_type": unit_type,
-                "weight_unit": weight_unit if weight_unit else None,  # ✅ store only if chosen
+                "weight_unit": weight_unit if weight_unit else None,
                 "must_buy_next": must_buy_next,
                 "family_id": family_id,
                 "added_by": app_user_id
@@ -65,8 +65,25 @@ def grocery_module():
             else:
                 g["unit_display"] = str(g["quantity"])
 
+            # Show item + Mark Purchased button
+            col1, col2 = st.columns([3,1])
+            with col1:
+                st.write(f"{g['name']} - {g['unit_display']} (Added by {g['added_by']})")
+            with col2:
+                if st.button("Mark Purchased", key=f"purchase_{g['id']}"):
+                    supabase.table("stock_list").insert({
+                        "grocery_id": g["id"],
+                        "name": g["name"],
+                        "quantity": g["quantity"],
+                        "unit_type": g["unit_type"],
+                        "weight_unit": g.get("weight_unit"),
+                        "family_id": g["family_id"],
+                        "added_by": g["added_by"]
+                    }).execute()
+                    supabase.table("groceries").delete().eq("id", g["id"]).execute()
+                    st.success(f"{g['name']} moved to Stock List")
+
         import pandas as pd
         df = pd.DataFrame(groceries)
-        # Drop raw UUIDs and internal columns
         df = df.drop(columns=["id", "family_id", "unit_type", "weight_unit"], errors="ignore")
         st.dataframe(df)
