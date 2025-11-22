@@ -5,7 +5,7 @@ from supabase_client import supabase
 if "user" not in st.session_state:
     st.session_state["user"] = None
 
-# --- Login / Register ---
+# --- Login ---
 def login():
     st.subheader("Login")
     email = st.text_input("Email")
@@ -16,13 +16,13 @@ def login():
             if user.user:  # ensure login succeeded
                 st.session_state["user"] = user.user
                 st.success("Logged in successfully!")
-                st.experimental_rerun()  # force app to reload into main menu
+                st.rerun()  # reload into main menu
             else:
                 st.error("Login failed: No user returned")
         except Exception as e:
             st.error(f"Login failed: {e}")
 
-
+# --- Register ---
 def register():
     st.subheader("Register")
     email = st.text_input("Email (register)")
@@ -43,7 +43,6 @@ def register():
         except Exception as e:
             st.error(f"Registration failed: {e}")
 
-
 # --- Grocery Management ---
 def grocery_module():
     st.subheader("Grocery Stock Management")
@@ -59,7 +58,7 @@ def grocery_module():
             "unit_type": unit_type,
             "must_buy_next": must_buy_next,
             "family_id": 1,  # placeholder family id
-            "added_by": st.session_state["user"].user.id
+            "added_by": st.session_state["user"].id
         }).execute()
         st.success("Item added!")
 
@@ -91,6 +90,38 @@ def task_module():
     data = supabase.table("tasks").select("*").execute()
     st.table(data.data)
 
+
+def family_module():
+    st.subheader("Family Management")
+
+    # Create Family
+    with st.expander("Create Family"):
+        fam_name = st.text_input("Family Name")
+        if st.button("Create Family"):
+            family = supabase.table("families").insert({
+                "name": fam_name,
+                "created_by": st.session_state["user"].id
+            }).execute()
+
+            if family.data:
+                fam_id = family.data[0]["id"]
+                supabase.table("app_users").update({
+                    "family_id": fam_id,
+                    "role": "admin"
+                }).eq("auth_id", st.session_state["user"].id).execute()
+                st.success(f"Family '{fam_name}' created! Share ID: {fam_id}")
+
+    # Join Family
+    with st.expander("Join Family"):
+        fam_id = st.text_input("Enter Family ID to join")
+        if st.button("Join Family"):
+            supabase.table("app_users").update({
+                "family_id": fam_id,
+                "role": "member"
+            }).eq("auth_id", st.session_state["user"].id).execute()
+            st.success("Joined family successfully!")
+
+
 # --- Main App ---
 def main():
     st.title("🏠 Family Productivity Hub")
@@ -102,16 +133,18 @@ def main():
         else:
             register()
     else:
-        menu = st.sidebar.radio("Menu", ["Groceries", "Tasks", "Logout"])
-        if menu == "Groceries":
+        st.write(f"👋 Welcome, **{st.session_state['user'].email}**")
+        menu = st.sidebar.radio("Menu", ["Family", "Groceries", "Tasks", "Logout"])
+        if menu == "Family":
+            family_module()
+        elif menu == "Groceries":
             grocery_module()
         elif menu == "Tasks":
             task_module()
         elif menu == "Logout":
             st.session_state["user"] = None
             st.success("Logged out!")
-            st.experimental_rerun()
-
+            st.rerun()  # reload back to login/register page
 
 if __name__ == "__main__":
     main()
