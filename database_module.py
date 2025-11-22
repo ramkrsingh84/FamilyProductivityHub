@@ -1,6 +1,7 @@
 import streamlit as st
 from supabase_client import supabase
 from helpers import get_family_id
+import pandas as pd
 
 def database_module():
     st.subheader("Database of Items")
