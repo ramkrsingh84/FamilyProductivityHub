@@ -4,9 +4,10 @@ from supabase_client import supabase
 from helpers import get_family_id
 
 CATEGORIES = [
-    "Fresh Produce","Bakery","Meat & Seafood","Dairy & Eggs","Frozen Food",
-    "Pantry/Staples","Snacks","Beverages","Condiments","Household",
-    "Personal Care","Baby Products","Pet Supplies","Other"
+    "Vegetables","Fruits","Bakery","Meat & Seafood","Dairy & Eggs",
+    "Frozen Food","Pantry/Staples","Snacks","Beverages","Condiments & Sauces",
+    "Household","Personal Care","Baby Products","Pet Supplies",
+    "Breakfast & Grains","Other"
 ]
 
 def buylist_module():
