@@ -53,7 +53,7 @@ def database_module():
         "Weight Unit": i["weight_unit"] or "",
         "Quantity": i["quantity"]
     } for i in items])
-    st.dataframe(df, use_container_width=True)
+    st.dataframe(df, width="stretch")
 
     # Selection dropdown
     selected_item = st.selectbox(

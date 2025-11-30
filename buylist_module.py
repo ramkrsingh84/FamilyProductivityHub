@@ -36,7 +36,7 @@ def buylist_module():
         "Weight Unit": b.get("weight_unit",""),
         "Category": b.get("category","Other")
     } for b in buy_items])
-    st.dataframe(df, use_container_width=True)
+    st.dataframe(df, width="stretch")
 
     # Selection dropdown
     selected_item = st.selectbox(

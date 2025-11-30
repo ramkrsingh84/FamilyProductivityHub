@@ -37,7 +37,7 @@ def stock_module():
         "Status": s["status"],
         "Category": s.get("category","Other")
     } for s in stock_items])
-    st.dataframe(df, use_container_width=True)
+    st.dataframe(df, width="stretch")
 
     # Selection dropdown
     selected_item = st.selectbox(
