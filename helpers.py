@@ -2,6 +2,11 @@ import streamlit as st
 from datetime import datetime
 from supabase_client import supabase
 
+def page_nav():
+    pages = ["Family", "Database", "Buy List", "Stock List", "Tasks", "Logout"]
+    choice = st.radio("📌 Navigate", pages, horizontal=True, key="page_nav")
+    return choice
+
 def get_family_id():
     result = supabase.table("app_users").select("family_id").eq("auth_id", st.session_state["user"].id).execute()
     if result.data and result.data[0]["family_id"]:
@@ -27,12 +32,9 @@ def get_user_name():
     return st.session_state["user"].email
     
 def get_user_id():
-    """Return the current app_user.id for the logged-in user."""
-    # Assuming you store auth_id in session_state after login
-    auth_id = st.session_state.get("auth_id")
-    if not auth_id:
+    if "user" not in st.session_state or st.session_state["user"] is None:
         return None
-
+    auth_id = st.session_state["user"].id
     data = supabase.table("app_users").select("id").eq("auth_id", auth_id).execute()
     if data.data:
         return data.data[0]["id"]

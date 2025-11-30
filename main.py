@@ -6,6 +6,7 @@ from helpers import get_user_name
 from stock_module import stock_module
 from database_module import database_module
 from buylist_module import buylist_module
+from helpers import page_nav
 
 
 if "user" not in st.session_state:
@@ -25,10 +26,13 @@ def main():
     else:
         user_name = get_user_name()
         st.write(f"👋 Welcome, **{user_name}**")
-        menu = st.sidebar.radio("Menu", ["Family", "Database", "Buy List", "Stock List", "Tasks", "Logout"])
+
+        # Top navigation bar
+        menu = page_nav()
+
         if menu == "Family":
             family_module()
-        if menu == "Database":
+        elif menu == "Database":
             database_module()
         elif menu == "Buy List":
             buylist_module()
