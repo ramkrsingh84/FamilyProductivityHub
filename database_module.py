@@ -40,6 +40,11 @@ def database_module():
     if not items:
         st.info("No items in Database")
         return
+    
+    # 🔎 Category filter
+    filter_cat = st.selectbox("Filter by Category", ["All"] + CATEGORIES)
+    if filter_cat != "All":
+        items = [i for i in items if i.get("category") == filter_cat]
 
     df = pd.DataFrame([{
         "Item": i["name"],

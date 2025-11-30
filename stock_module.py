@@ -21,6 +21,11 @@ def stock_module():
     if not stock_items:
         st.info("No items in Stock List")
         return
+    
+    # 🔎 Category filter
+    filter_cat = st.selectbox("Filter by Category", ["All"] + CATEGORIES)
+    if filter_cat != "All":
+        stock_items = [s for s in stock_items if s.get("category") == filter_cat]
 
     # Build aligned table
     df = pd.DataFrame([{
