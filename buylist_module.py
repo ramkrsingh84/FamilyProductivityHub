@@ -71,7 +71,7 @@ def buylist_module():
 
         if cols[1].button("Mark Purchased", key=f"purchase_{chosen['id']}"):
             supabase.table("stock_list").insert({
-                "grocery_id": chosen.get("grocery_id"),
+                "item_id": chosen.get("item_id"),
                 "name": chosen.get("name","Unknown"),   # ✅ ensure name is copied
                 "quantity": chosen.get("quantity",0),
                 "unit_type": chosen.get("unit_type","piece"),

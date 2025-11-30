@@ -98,7 +98,7 @@ def database_module():
 
         if cols[2].button("Copy to Buy List", key=f"copy_{chosen['id']}"):
             supabase.table("buy_list").insert({
-                "grocery_id": chosen["id"],
+                "item_id": chosen["id"],
                 "name": chosen["name"],
                 "quantity": 1,
                 "unit_type": chosen["unit_type"],
